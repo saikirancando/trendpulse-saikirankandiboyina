@@ -1,40 +1,85 @@
-# Create a folder called data/ if it doesn't exist
-# Save all stories to a file like data/trends_20240115.json
-# Print how many stories were collected in total
+"""Task 3: Load, analyze, and explore cleaned trend data."""
 
-import json
+import numpy as np
 import pandas as pd
 from pathlib import Path
-from datetime import datetime
 
-# A file at data/trends_YYYYMMDD.json DONE
-# At least 100 stories inside it 
-# A console message like: Collected 122 stories. Saved to data/trends_20240115.json
 
-def save_to_json():
-    """Load processed data and save to JSON file in data/ folder."""
-    # Create data/ folder if it doesn't exist
-    data_folder = Path("data")
-    data_folder.mkdir(exist_ok=True)
+def load_and_explore():
+    """Load and explore the cleaned CSV file."""
+    df = pd.read_csv("data/trends_clean.csv")
     
-    # Load processed data
-    df = pd.read_csv("processed_data.csv")
+    print(f"Loaded data: {df.shape}")
+    print("\nFirst 5 rows:")
+    print(df.head())
     
-    # Convert DataFrame to list of dictionaries
-    stories = df.to_dict(orient="records")
+    avg_score = df['score'].mean()
+    avg_comments = df['num_comments'].mean()
+    print(f"\nAverage score   : {avg_score:,.0f}")
+    print(f"Average comments: {avg_comments:,.0f}")
     
-    # Create filename with current date (YYYYMMDD format)
-    today = datetime.now().strftime("%Y%m%d")
-    filename = data_folder / f"trends_{today}.json"
+    return df
+
+
+def basic_analysis(df):
+    """Perform basic analysis using NumPy."""
+    print("\n--- NumPy Stats ---")
     
-    # Save to JSON file
-    with open(filename, "w", encoding="utf-8") as fh:
-        json.dump(stories, fh, indent=2)
+    scores = df['score'].values
     
-    # Print summary
-    total_stories = len(stories)
-    print(f"Collected {total_stories} stories. Saved to {filename}")
+    # Score statistics
+    mean_score = np.mean(scores)
+    median_score = np.median(scores)
+    std_score = np.std(scores)
+    highest_score = np.max(scores)
+    lowest_score = np.min(scores)
+    
+    print(f"Mean score   : {mean_score:,.0f}")
+    print(f"Median score : {median_score:,.0f}")
+    print(f"Std deviation: {std_score:,.0f}")
+    print(f"Max score    : {highest_score:,.0f}")
+    print(f"Min score    : {lowest_score:,.0f}")
+    
+    # Category with most stories
+    category_counts = df['category'].value_counts()
+    most_common_category = category_counts.idxmax()
+    most_common_count = category_counts.max()
+    print(f"\nMost stories in: {most_common_category} ({most_common_count} stories)")
+    
+    # Story with most comments
+    max_comments_idx = df['num_comments'].idxmax()
+    max_comments_story = df.loc[max_comments_idx]
+    title = max_comments_story['title']
+    comments = int(max_comments_story['num_comments'])
+    print(f"\nMost commented story: \"{title}\"  — {comments:,} comments")
+    
+    return mean_score
+
+
+def add_new_columns(df, avg_score):
+    """Add engagement and is_popular columns."""
+    df['engagement'] = df['num_comments'] / (df['score'] + 1)
+    df['is_popular'] = df['score'] > avg_score
+    return df
+
+
+def save_result(df):
+    """Save the analyzed DataFrame to CSV."""
+    output_file = Path("data/trends_analysed.csv")
+    df.to_csv(output_file, index=False)
+    print(f"\nSaved to {output_file}")
+
+
+def main():
+    """Execute the analysis pipeline."""
+    try:
+        df = load_and_explore()
+        avg_score = basic_analysis(df)
+        df = add_new_columns(df, avg_score)
+        save_result(df)
+    except Exception as e:
+        print(f"Error: {e}")
 
 
 if __name__ == "__main__":
-    save_to_json()
+    main()
